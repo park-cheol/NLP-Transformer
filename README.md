@@ -1,3 +1,11 @@
+# Implement
+1. build_vocab에서 먼저 vocab 생성
+
+python build_vocab.py
+
+2. main 실행
+pythom main.py --epochs ....
+
 # Model 
 
 ![transformer](https://user-images.githubusercontent.com/76771847/124423907-08ad9980-dda1-11eb-9ed9-4d9872c7131f.png)
