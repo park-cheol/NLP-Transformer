@@ -4,6 +4,8 @@
 
 ![mha_img_original](https://user-images.githubusercontent.com/76771847/124432128-39470080-ddac-11eb-918e-062fcab418d4.png)
 
+![Details-of-multi-head-attention-building-blocks](https://user-images.githubusercontent.com/76771847/124434814-49141400-ddaf-11eb-9fed-b543f423c183.png)
+
 # Paper
 
 https://papers.nips.cc/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf
@@ -23,3 +25,5 @@ https://github.com/graykode/nlp-tutorial/blob/master/5-1.Transformer/Transformer
 
 https://github.com/Huffon/pytorch-transformer-kor-eng
 
+## 기법
+Opimizer: 
