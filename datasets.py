@@ -13,7 +13,6 @@ import matplotlib.font_manager as fm
 from torchtext import data
 from torchtext.data import Example, Dataset
 
-
 #########################
 # convert to dataset
 #########################
@@ -27,19 +26,24 @@ def clean_text(text):
 def convert_to_dataset(data, kor, eng):
     """
     pandas 를 torchtext dataset 으로 변환
+    data: Dataset
+    kor: field
+    eng: field
     """
 
     # str 이 아닌 것을 없애버림
     missing_rows = [idx for idx, row in data.iterrows() if type(row.korean) != str or type(row.english) != str]
     data = data.drop(missing_rows)
 
-    # 변환하기
+    # iterrows:
+    # Name: 3395, dtype: object
+    # korean                           정말 미안해. 저쪽으로 자리 옮기도록 할게.
+    # english    I am so sorry. Let me move my seat over there.
+    # tolist: 이러한 것을 paired 되게 묶어줌
+    # ['정말 미안해, 저쪽으로 자리 옮기도록 할게', 'I am so sorry. Let me ****']
     list_of_examples = [Example.fromlist(row.apply(lambda x: clean_text(x)).tolist(),
                                          fields=[('kor', kor), ('eng', eng)]) for _, row in data.iterrows()]
-    # todo Example ?? 안에 어떻게 내용이 들어가 있는지 확인?
-
     dataset = Dataset(examples=list_of_examples, fields=[('kor', kor), ('eng', eng)])
-
     return dataset
 
 ###########################
@@ -68,35 +72,39 @@ def load_dataset(mode):
 
         return test_data
 
-# todo 이부분은 나중에 자세히
-def make_iter(batch_size, mode, train_data=None, valid_data=None, test_data=None):
+def make_iter(args, batch_size, mode, train_data=None, valid_data=None, test_data=None):
     """
     pandas -> torchtext Dataset으로 바꾸고 iteration 만들어냄
     """
     file_kor = open('pickles/kor.pickle', 'rb')
-    kor = pickle.load(file_kor)
+    kor = pickle.load(file_kor) # kor.vocab 열기
 
     file_eng = open('pickles/eng.pickle', 'rb')
-    eng = pickle.load(file_eng)
+    eng = pickle.load(file_eng) # eng.vocab 열기
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # convert pandas DataFrame to torchtext dataset
     if mode == 'train':
-        train_data = convert_to_dataset(train_data, kor, eng)
+        train_data = convert_to_dataset(train_data, kor, eng) # dataset
         valid_data = convert_to_dataset(valid_data, kor, eng)
 
         # make iterator using train and validation dataset
         print(f'Make Iterators for training . . .')
         train_iter, valid_iter = data.BucketIterator.splits(
             (train_data, valid_data),
-            # the BucketIterator needs to be told what function it should use to group the data.
+            # BucketIterator 는 data 를 group 하기 위해서 사용 될 function 을 알려줘야함
             # In our case, we sort dataset using text of example
             sort_key=lambda sent: len(sent.kor),
             # all of the tensors will be sorted by their length by below option
             sort_within_batch=True,
             batch_size=batch_size,
             device=device)
+        """BucketIterator
+        : 비슷한 길이의 examples(data) 들을 묶는(batch) iterator 를 정의
+        epoch 마다 새로운 shuffled batches를 생산할 때 필요로하는 padding의 양을 최소화한다
+        : 일반적인 dataloader의 iterator와 유사
+        """
 
         return train_iter, valid_iter
 

@@ -73,11 +73,13 @@ def main():
     pickle_eng = open('pickles/eng.pickle', 'rb')
     eng = pickle.load(pickle_eng)
 
-    args.input_dim = len(kor.vocab)
-    args.output_dim = len(eng.vocab)
-    args.sos_idx = eng.vocab.stoi['<sos>']
-    args.eos_idx = eng.vocab.stoi['<eos>']
-    args.pad_idx = eng.vocab.stoi['<pad>']
+    args.input_dim = len(kor.vocab) # 55002
+    args.output_dim = len(eng.vocab) # 19545
+
+    # stoi로 현재 단어에 맵핑된 고유 inx를 알 수 있음
+    args.sos_idx = eng.vocab.stoi['<sos>'] # 1
+    args.eos_idx = eng.vocab.stoi['<eos>'] # 2
+    args.pad_idx = eng.vocab.stoi['<pad>'] # 3
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -169,17 +171,17 @@ def main_worker(gpu, ngpus_per_node, args):
     # Load Dataset and train
     if args.mode == 'train':
         train_data, valid_data = load_dataset(args.mode)
-        train_iter, valid_iter = make_iter(args.batch_size, args.mode,
+        train_iter, valid_iter = make_iter(args ,args.batch_size, args.mode,
                                            train_data=train_data, valid_data=valid_data)
         train(args, model, train_iter, valid_iter, optimizer, criterion)
     else:
         test_data = load_dataset(args.mode)
-        test_iter = make_iter(args.batch_size, args.mode, test_data=test_data)
+        test_iter = make_iter(args, args.batch_size, args.mode, test_data=test_data)
 
         inference(args)
 
 def train(args, model, train_iter, valid_iter, optimizer, criterion):
-    print("Parameter 수: ", model.count_params())
+    print("Parameter 수: ", model.count_params()) # 82,253,312
     best_valid_loss = float('inf')
     for epoch in range(args.epochs):
         iter = 0
@@ -188,11 +190,19 @@ def train(args, model, train_iter, valid_iter, optimizer, criterion):
         start = time.time()
 
         for batch in train_iter:
+            print("----[Train]----")
             optimizer.zero_grad()
             source = batch.kor.cuda(args.gpu)
+            print("source: ", source.size())
+            # source: [batch=128, source_length=8]
+
             target = batch.eng.cuda(args.gpu)
+            print("target: ", target.size())
+            # target: [batch=128, target_length=23]
+
             # target sentences 는 <sos> 포함 (<eos>제외)
             output = model(source, target[:, :-1])[0]
+            print("----------------------------------------------------------------------------------------")
             # todo print
             # GT sentence 는 <eos>는 포함 (<sos>는 제외)
             output = output.contiguous().view(-1, output.shape[-1])

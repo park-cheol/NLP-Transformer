@@ -72,6 +72,7 @@ def generate():
 
     args.input_dim = len(kor.vocab)
     args.output_dim = len(eng.vocab)
+
     args.sos_idx = eng.vocab.stoi['<sos>']
     args.eos_idx = eng.vocab.stoi['<eos>']
     args.pad_idx = eng.vocab.stoi['<pad>']

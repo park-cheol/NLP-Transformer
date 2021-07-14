@@ -33,6 +33,11 @@ https://github.com/graykode/nlp-tutorial/blob/master/5-1.Transformer/Transformer
 
 https://github.com/Huffon/pytorch-transformer-kor-eng
 
+## Vocab/tokenizer
+OFFICIAL
+soynlp: https://lovit.github.io/nlp/2018/04/09/cohesion_ltokenizer/
+soynlp: https://github.com/lovit/soynlp/blob/master/tutorials/wordextractor_lecture.ipynb
+
 ## Result
 
 ![Screenshot from 2021-07-07 00-01-15](https://user-images.githubusercontent.com/76771847/124622923-7b5c6900-deb6-11eb-803d-54320aeacdb9.png)
