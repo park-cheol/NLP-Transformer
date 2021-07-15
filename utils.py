@@ -85,9 +85,15 @@ def display_attention(candidate, translation, attention):
     plt.show()
     plt.close()
 
+# get accuracy
+def get_accuracy(pred, answer, pad):
+    pred = pred.max(1)[1]
+    n_correct = pred.eq(answer)
+    n_correct = n_correct.masked_select(answer != pad)
+    # answer 중에 pad 인것을 다 제거
+    # masked_select(mask): mask는 tensor여야하고 크기도 같아야함
 
-
-
+    return n_correct.sum().item() / n_correct.size(0)
 
 
 

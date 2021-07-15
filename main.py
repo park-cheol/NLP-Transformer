@@ -6,6 +6,7 @@ import shutil
 import time
 import warnings
 import pickle
+from nltk.translate.bleu_score import sentence_bleu
 
 import torch
 import torch.nn as nn
@@ -31,6 +32,8 @@ parser.add_argument('--mode', default='train', type=str,
                     help='train Or test')
 parser.add_argument('--warm-steps', default=4000, type=int)
 parser.add_argument('--clip', default=1, type=int)
+parser.add_argument('--resume', type=str, default=None)
+
 # Model opt
 parser.add_argument('--input-dim', default=0, type=int)
 parser.add_argument('--output-dim', default=0, type=int)
@@ -77,9 +80,9 @@ def main():
     args.output_dim = len(eng.vocab) # 19545
 
     # stoi로 현재 단어에 맵핑된 고유 inx를 알 수 있음
-    args.sos_idx = eng.vocab.stoi['<sos>'] # 1
-    args.eos_idx = eng.vocab.stoi['<eos>'] # 2
-    args.pad_idx = eng.vocab.stoi['<pad>'] # 3
+    args.sos_idx = eng.vocab.stoi['<sos>'] # 2
+    args.eos_idx = eng.vocab.stoi['<eos>'] # 3
+    args.pad_idx = eng.vocab.stoi['<pad>'] # 1
 
     if args.seed is not None:
         random.seed(args.seed)
@@ -158,6 +161,11 @@ def main_worker(gpu, ngpus_per_node, args):
     else:
         model = torch.nn.DataParallel(model).cuda()
 
+
+    if args.resume is not None:
+        model.load_state_dict(torch.load(args.resume))
+    else:
+        print("No load state dict")
     # criterion and optimizer
     criterion = nn.CrossEntropyLoss(ignore_index=args.pad_idx).cuda(args.gpu)
     optimizer = ScheduleAdam(
@@ -178,12 +186,13 @@ def main_worker(gpu, ngpus_per_node, args):
         test_data = load_dataset(args.mode)
         test_iter = make_iter(args, args.batch_size, args.mode, test_data=test_data)
 
-        inference(args)
+        inference(args, model, test_iter, criterion)
 
 def train(args, model, train_iter, valid_iter, optimizer, criterion):
     print("Parameter 수: ", model.count_params()) # 82,253,312
     best_valid_loss = float('inf')
-    for epoch in range(args.epochs):
+    for epoch in range(args.start_epoch, args.epochs):
+        accuracy = 0
         iter = 0
         model.train()
         epoch_loss = 0
@@ -225,21 +234,24 @@ def train(args, model, train_iter, valid_iter, optimizer, criterion):
             iter += 1
             epoch_loss += loss.item()
 
+
         train_loss = epoch_loss / len(train_iter)
-        valid_loss = evaluate(model, valid_iter, criterion)
+        valid_loss, accuracy = evaluate(args, model, valid_iter, criterion)
+        accuracy = accuracy / len(train_iter)
 
         if valid_loss < best_valid_loss: # loss 가 더 낮게 뜨면 저장
             best_valid_loss = valid_loss
             torch.save(model.state_dict(), "saved_models/model_%d.pth" % (epoch + 1))
 
         print(f"Epoch: {epoch+1:02} | Epoch Time: ", datetime.timedelta(seconds=time.time() - start))
-        print(f"Train Loss: {train_loss:.3f} | Val Loss: {valid_loss:.3f}")
+        print(f"Train Loss: {train_loss:.3f} | Val Loss: {valid_loss:.3f} | Acc: {accuracy:.3f}")
 
 
 
-def evaluate(model, valid_iter, criterion):
+def evaluate(args, model, valid_iter, criterion):
     model.eval()
     epoch_loss = 0
+    accuracy = 0
 
     with torch.no_grad():
         for batch in valid_iter:
@@ -251,19 +263,25 @@ def evaluate(model, valid_iter, criterion):
             output = output.contiguous().view(-1, output.shape[-1])
             target = target[:, 1:].contiguous().view(-1)
 
+            accuracy = get_accuracy(output, target, args.pad_idx)
             loss = criterion(output, target)
 
             epoch_loss += loss.item()
 
-    return epoch_loss / len(valid_iter)
+    return epoch_loss / len(valid_iter), accuracy
 
 def inference(args, model, test_iter, criterion):
     model.load_state_dict(torch.load(args.resume))
     model.eval()
+    BLEU_score = 0
     epoch_loss = 0
-
+    i = 0
+    total_accuracy = 0
+    a=0
     with torch.no_grad():
         for batch in test_iter:
+            i += 1
+
             source = batch.kor
             target = batch.eng
 
@@ -273,10 +291,32 @@ def inference(args, model, test_iter, criterion):
             target = target[:, 1:].contiguous().view(-1)
 
             loss = criterion(output, target)
+            accuracy = get_accuracy(output, target, args.pad_idx)
+            total_accuracy += accuracy
 
+            translated_token = [eng.vocab.itos[token] for token in target]
+            translation = translated_token[:translated_token.index('<eos>')]
+            translation_ = ' '.join(translation)
+
+            pred = output.squeeze(0).max(dim=-1)[1]
+            translated_token_pred = [eng.vocab.itos[token] for token in pred]
+            translation_pred = translated_token_pred[:translated_token_pred.index('<eos>')]
+            translation_pred_ = ' '.join(translation_pred)
+
+            references = [translation]
+            BLEU = sentence_bleu(references, translation_pred, weights=[1])
+
+            BLEU_score += BLEU
+            # print("pred: ", translation_pred_)
+            # print("target ", translation_)
             epoch_loss += loss.item()
+            print(i, "---------------------------------------------------------")
 
+    BLEU_score = BLEU_score / len(test_iter)
     test_loss = epoch_loss / len(test_iter)
+    total_accuracy / len(test_iter)
+    print(f"BLEU score: {BLEU_score:.3f}")
+    print(f'accuracy: {total_accuracy:.3f} %')
     print(f'Test loss: {test_loss:.3f}')
 
 

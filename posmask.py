@@ -31,22 +31,22 @@ pad_idx = eng.vocab.stoi['<pad>']
 #####################
 
 def create_position_vector(sentence, args):
-    print("----[Create_position_vector]----")
+    # print("----[Create_position_vector]----")
     # [batch_size, sentence_length]
-    print("Sentence: ", sentence.size())
+    # print("Sentence: ", sentence.size())
     # encoder [128, 8]
     # decoder [128, 22]
     batch_size, _ = sentence.size()
     pos_vec = np.array([(pos + 1) if word != pad_idx else 0
                         for row in range(batch_size) for pos, word in enumerate(sentence[row])])
-    print("pos_vec", pos_vec.shape)
+    # print("pos_vec", pos_vec.shape)
     # encoder: (1024, )
     # decoder (2816, )
     # todo 다시 자세히 파악해보기 대략알겠음
 
     pos_vec = pos_vec.reshape(batch_size, -1)
     pos_vec = torch.LongTensor(pos_vec).cuda(args.gpu)
-    print("position_vector: ", pos_vec.size())
+    # print("position_vector: ", pos_vec.size())
     # encoder [128, 8]
     # decoder [128, 22]
 
@@ -54,18 +54,18 @@ def create_position_vector(sentence, args):
 
 def create_position_encoding(max_len, hidden_dim, args):
     # max_len = 65, hidden_dim = 512
-    print("----[Create_position_Encoding]----")
+    # print("----[Create_position_Encoding]----")
     # paper)
     # PE(pos, 2i) = sin(pos / 10000 ** (2*i / hidden_dim))
     # PE(pos, 2i + 1) = cos(pos / 10000 ** (2*i / hidden_dim))
     sinusoid_table = np.array([pos / np.power(10000, 2 * i / hidden_dim)
                                for pos in range(max_len) for i in range(hidden_dim)])
-    print("sinusoid_table:", sinusoid_table.shape)
+    # print("sinusoid_table:", sinusoid_table.shape)
     # (65*512=33280, )
     # sinusoid_table = [max_len * hidden_dim]
 
     sinusoid_table = sinusoid_table.reshape(max_len, -1)
-    print("sinusoid_table(reshape): ", sinusoid_table.shape)
+    # print("sinusoid_table(reshape): ", sinusoid_table.shape)
     # (65, 512) array
     # [max_len, hidden_dim]
 
@@ -75,7 +75,7 @@ def create_position_encoding(max_len, hidden_dim, args):
     # Tensor로 변환하고 batc size 배로 repeat
     sinusoid_table = torch.FloatTensor(sinusoid_table).cuda(args.gpu)
     sinusoid_table[0] = 0. # todo ???
-    print("Position_Encoding: ", sinusoid_table.size())
+    # print("Position_Encoding: ", sinusoid_table.size())
 
     # [65, 512]
     return sinusoid_table
