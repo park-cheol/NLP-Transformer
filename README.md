@@ -40,6 +40,8 @@ soynlp: https://github.com/lovit/soynlp/blob/master/tutorials/wordextractor_lect
 
 ## Result
 
+![transformer](https://user-images.githubusercontent.com/76771847/126057232-905ab2db-5b8c-494c-a0d9-3b00b0640230.png)
+
 ![Screenshot from 2021-07-07 00-01-15](https://user-images.githubusercontent.com/76771847/124622923-7b5c6900-deb6-11eb-803d-54320aeacdb9.png)
 
 ![Screenshot from 2021-07-06 23-59-33](https://user-images.githubusercontent.com/76771847/124622928-7c8d9600-deb6-11eb-88ae-f5533a040afb.png)

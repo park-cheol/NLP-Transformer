@@ -157,7 +157,7 @@ def generate():
 
     print(f'kor > {args.input}')
     print(f'eng > {translation.capitalize()}') # capitalize: 첫 앞문자만 대문자로
-    # display_attention(tokenized, translated_token, attention_map[4].squeeze(0)[:-1])
+    display_attention(tokenized, translated_token, attention_map[4].squeeze(0)[:-1])
 
 if __name__ == '__main__':
     generate()

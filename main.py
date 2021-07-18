@@ -179,7 +179,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # Load Dataset and train
     if args.mode == 'train':
         train_data, valid_data = load_dataset(args.mode)
-        train_iter, valid_iter = make_iter(args ,args.batch_size, args.mode,
+        train_iter, valid_iter = make_iter(args, args.batch_size, args.mode,
                                            train_data=train_data, valid_data=valid_data)
         train(args, model, train_iter, valid_iter, optimizer, criterion)
     else:
@@ -199,19 +199,18 @@ def train(args, model, train_iter, valid_iter, optimizer, criterion):
         start = time.time()
 
         for batch in train_iter:
-            print("----[Train]----")
+            # print("----[Train]----")
             optimizer.zero_grad()
             source = batch.kor.cuda(args.gpu)
-            print("source: ", source.size())
+            # print("source: ", source.size())
             # source: [batch=128, source_length=8]
 
             target = batch.eng.cuda(args.gpu)
-            print("target: ", target.size())
+            # print("target: ", target.size())
             # target: [batch=128, target_length=23]
 
             # target sentences 는 <sos> 포함 (<eos>제외)
             output = model(source, target[:, :-1])[0]
-            print("----------------------------------------------------------------------------------------")
             # todo print
             # GT sentence 는 <eos>는 포함 (<sos>는 제외)
             output = output.contiguous().view(-1, output.shape[-1])
@@ -228,7 +227,7 @@ def train(args, model, train_iter, valid_iter, optimizer, criterion):
 
             optimizer.step()
 
-            if iter % 100 == 0:
+            if iter % 500 == 0:
                 print(f"Epoch: {epoch+1:02} | Iter{iter} / {len(train_iter)} | loss {loss:.3f}")
 
             iter += 1
@@ -237,7 +236,7 @@ def train(args, model, train_iter, valid_iter, optimizer, criterion):
 
         train_loss = epoch_loss / len(train_iter)
         valid_loss, accuracy = evaluate(args, model, valid_iter, criterion)
-        accuracy = accuracy / len(train_iter)
+        accuracy = accuracy / len(valid_iter)
 
         if valid_loss < best_valid_loss: # loss 가 더 낮게 뜨면 저장
             best_valid_loss = valid_loss
@@ -252,7 +251,6 @@ def evaluate(args, model, valid_iter, criterion):
     model.eval()
     epoch_loss = 0
     accuracy = 0
-
     with torch.no_grad():
         for batch in valid_iter:
             source = batch.kor
@@ -263,7 +261,7 @@ def evaluate(args, model, valid_iter, criterion):
             output = output.contiguous().view(-1, output.shape[-1])
             target = target[:, 1:].contiguous().view(-1)
 
-            accuracy = get_accuracy(output, target, args.pad_idx)
+            accuracy += get_accuracy(output, target, args.pad_idx)
             loss = criterion(output, target)
 
             epoch_loss += loss.item()
@@ -277,7 +275,6 @@ def inference(args, model, test_iter, criterion):
     epoch_loss = 0
     i = 0
     total_accuracy = 0
-    a=0
     with torch.no_grad():
         for batch in test_iter:
             i += 1
@@ -291,6 +288,7 @@ def inference(args, model, test_iter, criterion):
             target = target[:, 1:].contiguous().view(-1)
 
             loss = criterion(output, target)
+
             accuracy = get_accuracy(output, target, args.pad_idx)
             total_accuracy += accuracy
 
@@ -307,8 +305,8 @@ def inference(args, model, test_iter, criterion):
             BLEU = sentence_bleu(references, translation_pred, weights=[1])
 
             BLEU_score += BLEU
-            # print("pred: ", translation_pred_)
-            # print("target ", translation_)
+            print("pred: ", translation_pred_)
+            print("target ", translation_)
             epoch_loss += loss.item()
             print(i, "---------------------------------------------------------")
 
